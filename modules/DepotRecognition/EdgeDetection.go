@@ -49,8 +49,6 @@ func convolute(img image.Image, mask [3][3]int) *image.RGBA {
 
 	for x := 1; x < img.Bounds().Dx() - 1; x++ {
 		for y := 1; y < img.Bounds().Dy() -1; y++ {
-	// x := 26
-	// y := 25
 			r1 := int32(0)
 			g1 := int32(0)
 			b1 := int32(0)

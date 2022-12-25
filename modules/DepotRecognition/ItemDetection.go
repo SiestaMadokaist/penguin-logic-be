@@ -2,10 +2,9 @@ package DepotRecognition
 
 import (
 	"errors"
-	"fmt"
 	"image"
 	"image/png"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"strconv"
@@ -17,7 +16,11 @@ type Cropable interface {
 }
 
 func GetBounds() [][2]int {
-	b, err := ioutil.ReadFile("./features/detector.txt")
+	detector, err := os.Open("./features/detector.txt")
+	if (err != nil) {
+		panic(errors.New("cannot open fetaures/detector"))
+	}
+	b, err := io.ReadAll(detector)
 	if (err != nil) {
 		panic(errors.New("cannot open features/detector"))
 	}
@@ -25,8 +28,8 @@ func GetBounds() [][2]int {
 	content := strings.Split(string(b), "\n");
 	for i, line := range content {
 		v := strings.Split(line, " ")
-		low, _ := strconv.ParseInt(v[0], 10, 8)
-		high, _ := strconv.ParseInt(v[1], 10, 8)
+		low, _ := strconv.ParseInt(v[0], 10, 16)
+		high, _ := strconv.ParseInt(v[1], 10, 16)
 		boundaries[i] = [2]int{ int(low), int(high) }
 	}
 	return boundaries;
@@ -54,16 +57,20 @@ func (depot DepotImage) Crop(x int, y int, size int) DepotImage {
 
 func (depot DepotImage) getHistogram() []int {
 	histogram := make([]int, 256);
-	grayImage := depot.Image.(*image.Gray)
-	for x := 0; x < depot.Image.Bounds().Dx(); x++ {
-		for y := 0; y < depot.Image.Bounds().Dy(); y++ {
+	grayImage := depot.Image.(*image.Gray);
+	min := grayImage.Bounds().Min
+	for x := 0; x < grayImage.Bounds().Dx(); x++ {
+		for y := 0; y < grayImage.Bounds().Dy(); y++ {
 			yPost := y/16
 			xPost := x/16
 			postIndex := yPost * 16 + xPost;
-			histogram[postIndex] += int(grayImage.GrayAt(x, y).Y)
+			xLoc := x + min.X
+			yLoc := y + min.Y
+			grayValue := grayImage.GrayAt(xLoc, yLoc)
+			histogram[postIndex] += int(grayValue.Y)
 		}
 	}
-	maxValue := 0
+	maxValue := 1
 	for _, histValue := range histogram {
 		maxValue = int(math.Max(float64(maxValue), float64(histValue)));
 	}
@@ -81,16 +88,14 @@ func (depot DepotImage) Save(path string) {
 	png.Encode(io, depot.Image)
 }
 
-func (depot DepotImage) ItemDetectedAt(x int, y int, size int) DepotImage {
-	var cropped DepotImage
+func (depot DepotImage) ItemDetectedAt(x int, y int, size int) (cropped DepotImage, confidence float32) {
+	// var cropped DepotImage
 	if (depot.Progress == EdgeDetection) {
 		cropped = depot.Crop(x, y, size)
 	} else {
 		cropped = depot.GetEdge().Crop(x, y, size)
 	}
 	hist := cropped.getHistogram()
-	confidence := getConfidence(GetBounds(), hist)
-	fmt.Printf("%2f", confidence)
-	// return true;
-	return cropped;
+	confidence = getConfidence(GetBounds(), hist)
+	return depot.Crop(x, y, size), confidence;
 }
