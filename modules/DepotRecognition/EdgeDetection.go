@@ -31,20 +31,17 @@ func (depot *DepotImage) GetEdge() (DepotImage) {
 
 	edge := image.NewGray(image.Rect(0, 0, depot.Image.Bounds().Dx(), depot.Image.Bounds().Dy()))
 	
-	for x := 0; x < edge.Bounds().Dx() - 1; x++ {
-		for y := 0; y < edge.Bounds().Dy() -1; y++ {
+	for x := 0; x < edge.Bounds().Dx(); x++ {
+		for y := 0; y < edge.Bounds().Dy(); y++ {
 			rgbaV := edgeV.RGBAAt(x, y)
 			rgbaH := edgeH.RGBAAt(x, y)
 			grayLevel := sumGray(rgbaV, rgbaH)
-			// fmt.Printf("%d, %d, %v - %v, %d\n", x, y, rgbaV, rgbaV, grayLevel)
 			var whiteLevel int;
 			if (grayLevel > 10) { whiteLevel = 255 } else { whiteLevel = 0}
-			// edge.SetGray(x, y, color.Gray{uint8(whiteLevel)})
-			// fmt.Println(x, y, grayLevel)
 			edge.SetGray(x, y, color.Gray{ Y: uint8(whiteLevel) })
 		}
 	}
-	return DepotImage{Image: edge, Progress: EdgeDetected}
+	return DepotImage{Image: edge, Progress: EdgeDetection}
 }
 
 func convolute(img image.Image, mask [3][3]int) *image.RGBA {

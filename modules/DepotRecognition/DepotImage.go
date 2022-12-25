@@ -6,7 +6,7 @@ type Progress int64
 
 const (
 	Original Progress = iota
-	EdgeDetected
+	EdgeDetection
 )
 
 type DepotImage struct {

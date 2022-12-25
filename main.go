@@ -11,9 +11,12 @@ func main() {
 	if (err != nil) { panic(err); }
 	img, err := png.Decode(imgFile)
 	if (err != nil) { panic(err); }
+	// bounds := DepotRecognition.GetBounds()
+	// fmt.Printf("%v", bounds)
 	depotImage := DepotRecognition.NewDepot(img)
-	depotEdge := depotImage.GetEdge()
-	ioWriter, err := os.Create("./testdata/output/1.edge.png")
-	if (err != nil) { panic(err); }
-	png.Encode(ioWriter, depotEdge.Image)
+	depotImage.ItemDetectedAt(30, 20, 160).Save("./testdata/output/1.cropped.png")
+	// print(depotEdge)
+	// ioWriter, err := os.Create("./testdata/output/1.edge.png")
+	// if (err != nil) { panic(err); }
+	// png.Encode(ioWriter, depotEdge.Image)
 }
