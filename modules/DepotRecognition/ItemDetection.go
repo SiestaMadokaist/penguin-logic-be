@@ -2,6 +2,7 @@ package DepotRecognition
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"image/png"
 	"io"
@@ -35,22 +36,34 @@ func GetBounds() [][2]int {
 	return boundaries;
 }
 
-func getConfidence(bounds [][2]int, values []int) float32 {
+type Rejection struct {
+	X int;
+	Y int;
+	Bound [2]int;
+	V int;
+}
+func getRejectedLocation(bounds [][2]int, values []int) []Rejection {
 	inRange := 0
+	var rejected []Rejection;
 	for i, bound := range bounds {
 		lowerbound := bound[0]
 		upperbound := bound[1]
 		value := values[i];
+		X := i / 16
+		Y := i % 16
+		v := Rejection{ X: X, Y: Y, Bound: bound, V: value }
 		if lowerbound <= value && value <= upperbound {
 			inRange++
+		} else {
+			rejected = append(rejected, v)
 		}
 	}
-	return float32(inRange) / 256
+	return rejected;
 }
 
 func (depot DepotImage) Crop(x int, y int, size int) DepotImage {
 	original, ok := depot.Image.(Cropable)
-	if (!ok) { panic("cannot convert image to gray"); }
+	if (!ok) { panic("cannot convert image to cropable"); }
 	cropped := original.SubImage(image.Rect(x, y, x + size, y + size));
 	return DepotImage{Image: cropped, Progress: depot.Progress }
 }
@@ -88,14 +101,22 @@ func (depot DepotImage) Save(path string) {
 	png.Encode(io, depot.Image)
 }
 
+func (cropped DepotImage) Rejections() (rejection []Rejection) {
+	hist := cropped.getHistogram()
+	rejection = getRejectedLocation(GetBounds(), hist)
+	return rejection;
+}
+
 func (depot DepotImage) ItemDetectedAt(x int, y int, size int) (cropped DepotImage, confidence float32) {
-	// var cropped DepotImage
 	if (depot.Progress == EdgeDetection) {
 		cropped = depot.Crop(x, y, size)
 	} else {
 		cropped = depot.GetEdge().Crop(x, y, size)
 	}
-	hist := cropped.getHistogram()
-	confidence = getConfidence(GetBounds(), hist)
+	rejection := cropped.Rejections()
+	score := float32(256 - len(rejection))
+	confidence = score / 256;
+	fmt.Printf("%2f %d %2f \n", score, len(rejection), confidence);
+	// confidence = float32(256 - len(rejection)) / 256
 	return depot.Crop(x, y, size), confidence;
 }

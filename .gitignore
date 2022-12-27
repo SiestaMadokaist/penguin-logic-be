@@ -2,3 +2,5 @@
 .env
 .credentials
 testdata/output
+o.txt
+test.png
